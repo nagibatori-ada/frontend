@@ -1,0 +1,109 @@
+.swap {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 30px 20px;
+  background-color: #fff;
+  border-radius: 16px;
+  width: 40%;
+}
+.fromtoarrow {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+.pairs {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-bottom: 35px;
+  justify-content: space-around;
+}
+.description {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  font-size: 12px;
+  margin: 10px 0;
+}
+.pair {
+  position: absolute;
+  right: 5px;
+  bottom: 20px;
+  flex-basis: 40%;
+  text-align: center;
+  border: 0;
+  border-radius: 8px;
+  background-color: transparent;
+  color: #000;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+}
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.formsubmit {
+  padding: 10px 20px;
+  width: 50%;
+  background-color: rgba($color: #00AA78, $alpha: 1.0);
+  color: #fff;
+  font-size: 24px;
+  border: 0;
+  border-radius: 16px;
+  font-weight: 600;
+  margin-top: 20px;
+  cursor: pointer;
+}
+.formsubmit:disabled {
+  background-color: rgba($color: rgb(123, 123, 123), $alpha: 1.0);
+  
+}
+.forminput {
+  position: relative;
+  width: 100%;
+}
+.forminput__input {
+  height: calc(3.5rem + 2px);
+  line-height: 1.25;
+  padding: 1rem 0.75rem;
+  font-size: 16px;
+  margin-bottom: 10px;
+  width: 100%;
+  border: 0.5px solid rgba(41, 41, 41, 0.3);
+  border-radius: 16px;
+}
+.forminput__label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  padding: 1rem .75rem;
+  pointer-events: none;
+  border: 1px solid transparent;
+  transform-origin: 0 0;
+  transition: opacity .15s ease-in-out, transform .15s ease-in-out;
+  font-size: 12px;
+}
+.forminput__input:focus,
+.forminput__input:not(:placeholder-shown) {
+  padding-top: 1.625rem;
+  padding-bottom: .625rem;
+}
+.forminput__input:focus~.forminput__label,
+.forminput__input:not(:placeholder-shown)~.forminput__label {
+  opacity: .65;
+  transform: scale(.85) translateY(-.75rem) translateX(.15rem);
+}
