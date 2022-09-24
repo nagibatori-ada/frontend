@@ -1,0 +1,1 @@
+export { getPairs } from './endpoints/trading'

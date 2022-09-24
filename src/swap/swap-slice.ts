@@ -3,6 +3,7 @@ import { TRANSACTION_TYPES, TRANSACTIONS } from '@wavesenterprise/transactions-f
 
 import {We} from "@wavesenterprise/sdk";
 import { RootState } from "../common/store";
+import { getPairs } from "../api";
 
 const CONTRACT_ID = '3t1eC1rzmmwseBxXqyfJf3QLupFRSv39CSSQQ9eG8eB4'
 
@@ -132,12 +133,7 @@ export const loadPairs = createAsyncThunk(
   'name/loadPairs',
   async (_, {rejectWithValue}) => {
     try {
-      const res = await fetch('http://45.67.56.33:8228/api/v1/trading/pairs/all/', {
-        headers: new Headers({
-          'Accept': 'application/json',
-        }),
-        
-      })
+      const res = await getPairs()
       const data: Pair[] = await res.json()
       if (!data || !data.length) throw new Error("Нет пар!")
       return data.map(pair => ({
