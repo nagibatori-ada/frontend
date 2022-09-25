@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo } from 'react'
 import { shallowEqual } from 'react-redux'
 import { profileSelector } from '../auth/auth-slice'
 import { useAppDispatch, useAppSelector } from '../common/store'
-import { Asset, changePair, changeSwapValues, formSelector, loadPairs, pairsSelector } from './swap-slice'
+import { Asset, changePair, changeSwapValues, exchange, formSelector, loadPairs, pairsSelector } from './swap-slice'
 import styles from './swap.module.scss'
 
 const FormInput = ({type, value, event, assets, current_id, handleSelect}: {
@@ -10,7 +10,7 @@ const FormInput = ({type, value, event, assets, current_id, handleSelect}: {
   value?: number,
   event: (e: React.ChangeEvent<HTMLInputElement>) => void,
   assets: Asset[],
-  current_id: number,
+  current_id: string,
   handleSelect: (type: 'from' | 'to') => (e: React.ChangeEvent<HTMLSelectElement>) => void
 }) => (
   <div className={styles.forminput}>
@@ -32,7 +32,7 @@ const Form = () => {
   const assets = useMemo(() => {
     const result: Asset[] = []
     pairs.forEach(pair => {
-      if (!result.find(p => p.id === pair.asset_from.id)) result.push(pair.asset_from)
+      if (!result.find(p => p.id === pair.asset_a.id)) result.push(pair.asset_a)
     })
     return result
   }, [pairs])
@@ -45,50 +45,53 @@ const Form = () => {
     }
 
   // TODO contract integration
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
     /* Contact calls here */
-  }
+    dispatch(exchange())
+  }, [dispatch])
 
-  const onSelectChange = (type: 'from' | 'to') => (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (!selected) return
-    if (
-      (+e.target.value === selected.asset_to.id && type !== 'to') || 
-      (+e.target.value === selected.asset_from.id && type !== 'from')
-    ) {
-      return dispatch(
-        changePair(
-          pairs.find(pair => 
-            pair.asset_from.id === selected.asset_to.id && 
-            pair.asset_to.id === selected.asset_from.id)!.id
+  const onSelectChange = (type: 'from' | 'to') => 
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      if (!selected) return
+      if (
+        (e.target.value === selected.asset_b.id && type !== 'to') || 
+        (e.target.value === selected.asset_a.id && type !== 'from')
+      ) {
+        return dispatch(
+          changePair(
+            pairs.find(pair => 
+              pair.asset_a.id === selected.asset_b.id && 
+              pair.asset_b.id === selected.asset_a.id)!.id
+            )
           )
-        )
-    }
-    switch (type) {
-      case 'from':
-        return dispatch(changePair(
-          pairs.find(pair => 
-            pair.asset_from.id === +e.target.value && 
-            pair.asset_to.id === selected.asset_to.id)!.id
+      }
+      console.log(pairs, e.target.value)
+      switch (type) {
+        case 'from':
+          return dispatch(changePair(
+            pairs.find(pair => 
+              '' + pair.asset_a.id === e.target.value && 
+              pair.asset_b.id === selected.asset_b.id)!.id
+            )
           )
-        )
-      case 'to':
-        return dispatch(changePair(
-          pairs.find(pair => 
-            pair.asset_from.id === selected.asset_from.id && 
-            pair.asset_to.id === +e.target.value)!.id
+        case 'to':
+          return dispatch(changePair(
+            pairs.find(pair => 
+              pair.asset_a.id === selected.asset_a.id && 
+              '' + pair.asset_b.id === e.target.value)!.id
+            )
           )
-        )
-    }
+      }
   }
 
   return (
-    <form className={styles.form} onSubmit={isValid ? onSubmit : (e) => e.preventDefault()}>
+    <form className={styles.form} onSubmit={onSubmit}>
       <FormInput type='from' 
                  value={from_value} 
                  event={selected ? changeInput('from') : () => {}}
                  assets={assets}
-                 current_id={selected?.asset_from.id || -1}
+                 current_id={selected?.asset_a.id || '-1'}
                  handleSelect={onSelectChange}
       />
       <span className={styles.fromtoarrow}>{'↓'}</span>
@@ -96,21 +99,22 @@ const Form = () => {
                  value={to_value} 
                  event={selected ? changeInput('to') : () => {}}
                  assets={assets}
-                 current_id={selected?.asset_to.id || -2}
+                 current_id={selected?.asset_b.id || '-2'}
                  handleSelect={onSelectChange}
       />
         { 
           selected && 
           <div className={styles.description}>
             <div>Price</div>
-            <div>{1/+selected.ratio} {selected.asset_from.ticker} per {selected.asset_to.ticker}</div>
+            <div>{1/+selected.ratio} {selected.asset_a.ticker} per {selected.asset_b.ticker}</div>
           </div> 
         }
-      <input className={`${styles.formsubmit}`} disabled={!isValid} type="submit" value="Swap"/>
+      <input className={`${styles.formsubmit}`} type="submit" value="Swap"/>
     </form>
   )
 }
-
+// isValid ? onSubmit : (e) => e.preventDefault()
+/*disabled={!isValid} */
 export const Swap = () => {
   const dispatch = useAppDispatch()
 

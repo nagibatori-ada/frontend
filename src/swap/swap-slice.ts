@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { TRANSACTION_TYPES, TRANSACTIONS } from '@wavesenterprise/transactions-factory'
+import { TRANSACTIONS } from '@wavesenterprise/transactions-factory'
+import { Keypair } from "@wavesenterprise/signer";
 
 import {We} from "@wavesenterprise/sdk";
 import { RootState } from "../common/store";
@@ -10,24 +11,33 @@ const CONTRACT_ID = '3t1eC1rzmmwseBxXqyfJf3QLupFRSv39CSSQQ9eG8eB4'
 export type PairID = number
 
 export interface Asset {
-  id: number,
+  id: string,
   name: string,
   ticker: string,
-  volume_24h: number
+  volume_24h: number,
+  asset_id: string
 }
 
-export interface Pair {
+export interface PairRaw {
   id: PairID,
-  asset_from: Asset,
-  asset_to: Asset,
-  ratio: string,
-  ui_name?: string
+  asset_a: Asset,
+  asset_b: Asset,
+  contract_id: string
+}
+
+export interface Pair extends PairRaw {
+  ratio: string
+}
+export interface PairBackend extends PairRaw {
+  weight_a: number,
+  weight_b: number
 }
 
 interface SwapForm {
   selected: Pair,
   from_value: number,
-  to_value: number
+  to_value: number,
+  lastChanges: 'from' | 'to'
 }
 
 type SwapState = {
@@ -38,7 +48,8 @@ type SwapState = {
 const getInitialForm = (pair: Pair): SwapForm => ({
   selected: pair,
   from_value: 0,
-  to_value: 0
+  to_value: 0,
+  lastChanges: 'from'
 })
 
 const initialState: SwapState = {
@@ -47,99 +58,83 @@ const initialState: SwapState = {
 
 const nodeUrl = `https://hackathon.welocal.dev/node-0/`
 export const sdk = new We(nodeUrl)
-export const SEED = 'when cluster camera mistake movie certain category garlic regret believe visit evidence cute legal expire'
+export const SEED = 'thing action ugly exclude usage day victory file panel jeans oxygen melody upset employ tool'
 
 // TODO Contract integration
 const handleTx = async ({
-  amountA, 
-  amountB, 
-  assetIDA, 
-  assetIDB, 
-  weightA, 
-  weightB
+  assetId,
+  babki,
+  type,
+  contract_id
 }: {
-  amountA: number, 
-  amountB: number, 
-  assetIDA: string, 
-  assetIDB: string, 
-  weightA: number, 
-  weightB: number
+  babki: number, 
+  assetId: string,
+  type: 'from' | 'to',
+  contract_id: string
 }) => {
   const config: any = await sdk.node.config();
-
-  const fee = config.minimumFee[TRANSACTION_TYPES.Transfer]
-
-  const res = await window.WEWallet.publicState()
-
+  const fee = config.minimumFee[104]
+  const res = await Keypair.fromExistingSeedPhrase(SEED)
   const tx = TRANSACTIONS.CallContract.V5({
-      contractId: CONTRACT_ID,
+      contractId: contract_id,
       params: [
           {
-            key: 'amountA',
-            value: amountA,
-            type: 'integer'
-          },
-          {
-            key: 'amountB',
-            value: amountB,
-            type: 'integer'
-          },
-          {
-            key: 'weightA',
-            value: weightA,
-            type: 'integer'
-          },
-          {
-            key: 'weightB',
-            value: weightB,
-            type: 'integer'
-          },
-          {
-            key: 'idA',
-            value: assetIDA,
-            type: 'string'
-          },
-          {
-            key: 'idB',
-            value: assetIDB,
+            key: 'action',
+            value: type === 'from' ? 'buyB' : 'buyA',
             type: 'string'
           }
       ],
-      senderPublicKey: res.account.publicKey,
+      senderPublicKey: await res.privateKey(),
       fee: fee,
       contractVersion: 1,
       payments: [
-          /* TODO слыш работать */
+        {
+          assetId,
+          amount: babki
+        }
       ]
   })
   
-  const signedTx = await window.WEWallet.signTx(tx);
-
-  
-  
-  try {
-      const res = await sdk.broadcastRaw(signedTx)
-
-      console.log(res);
-      // TODO Чота после успешной интеграции
-  } catch (e) {
-
-
-  }
-
+  console.log(tx)
+  const signedTx = await window.WEWallet.signTx(tx, SEED);
+  console.log(signedTx)
+  const broadcast = await sdk.broadcast(signedTx)
+  return broadcast
 }
 
+export const exchange = createAsyncThunk(
+  'swap/exchange',
+  async(_, {rejectWithValue, getState}) => {
+    const { swap } = getState() as RootState
+    const { form } = swap
+    if (!form) return
+
+    const body = {
+      type: form.lastChanges,
+      assetId: form.lastChanges === 'from' ? form.selected.asset_a.asset_id : form.selected.asset_b.asset_id,
+      babki: form.lastChanges === 'from' ? form.from_value : form.to_value,
+      contract_id: form.selected.contract_id
+    }
+
+    try {
+      const handled = await handleTx({
+        ...body
+      })
+      return handled
+    } catch(e) {
+      rejectWithValue(e)
+    }
+  }
+)
+
 export const loadPairs = createAsyncThunk(
-  'name/loadPairs',
+  'swap/loadPairs',
   async (_, {rejectWithValue}) => {
     try {
       const res = await getPairs()
-      const data: Pair[] = await res.json()
+      const data: PairBackend[] = await res.json()
       if (!data || !data.length) throw new Error("Нет пар!")
-      return data.map(pair => ({
-        ...pair,
-        ui_name: `${pair.asset_from.ticker} -> ${pair.asset_to.ticker}`
-      }))
+      return data
 
     } catch(e) {
       rejectWithValue(e)
@@ -160,7 +155,8 @@ const swapSlice = createSlice({
       const ratio = +state.form.selected.ratio
       
       if (isNaN(ratio) || isNaN(value)) return
-
+      
+      state.form!.lastChanges = type
       switch (type) {
         case "from":
           state.form!.to_value = value * ratio
@@ -186,11 +182,22 @@ const swapSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(loadPairs.fulfilled, (state, action) => {
       const pairs = action.payload!
-      state.pairs = pairs
 
-      state.form = getInitialForm(pairs[0])
+      state.pairs = pairs.map(pair => ({
+        ...pair,
+        ratio: '' + pair.weight_a / pair.weight_b
+      }))
+
+      state.form = getInitialForm(state.pairs[0])
     })
     builder.addCase(loadPairs.rejected, (state, action) => {
+      console.log(action.error)
+    })
+
+    builder.addCase(exchange.fulfilled, (state, action) => {
+      console.log(action.payload)
+    })
+    builder.addCase(exchange.rejected, (state, action) => {
       console.log(action.error)
     })
   }
