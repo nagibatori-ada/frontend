@@ -6,8 +6,6 @@ import {We} from "@wavesenterprise/sdk";
 import { RootState } from "../common/store";
 import { getPairs } from "../api";
 
-const CONTRACT_ID = '3t1eC1rzmmwseBxXqyfJf3QLupFRSv39CSSQQ9eG8eB4'
-
 export type PairID = number
 
 export interface Asset {

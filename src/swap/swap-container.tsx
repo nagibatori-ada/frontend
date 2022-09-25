@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo } from 'react'
 import { shallowEqual } from 'react-redux'
-import { profileSelector } from '../auth/auth-slice'
+// import { profileSelector } from '../auth/auth-slice'
 import { useAppDispatch, useAppSelector } from '../common/store'
 import { Asset, changePair, changeSwapValues, exchange, formSelector, loadPairs, pairsSelector } from './swap-slice'
 import styles from './swap.module.scss'
@@ -24,7 +24,7 @@ const FormInput = ({type, value, event, assets, current_id, handleSelect}: {
 
 const Form = () => {
   const { to_value, from_value, selected } = useAppSelector(formSelector, shallowEqual) || {}
-  const profile = useAppSelector(profileSelector, shallowEqual)
+  // const profile = useAppSelector(profileSelector, shallowEqual)
   const pairs = useAppSelector(pairsSelector, shallowEqual)
   
   const dispatch = useAppDispatch()
@@ -37,7 +37,7 @@ const Form = () => {
     return result
   }, [pairs])
 
-  const isValid = from_value && !isNaN(+profile.balance.available) && from_value < +profile.balance.available 
+  // const isValid = from_value && !isNaN(+profile.balance.available) && from_value < +profile.balance.available 
 
   const changeInput = (type: 'from' | 'to') => 
     (e: React.ChangeEvent<HTMLInputElement>) => {
